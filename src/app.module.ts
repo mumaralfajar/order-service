@@ -1,13 +1,23 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CqrsModule } from '@nestjs/cqrs';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { Order } from './entities/order.entity';
-import { OrderService } from './services/order.service';
 import { OrderController } from './controllers/order.controller';
 import { InventoryGrpcClient } from './grpc/inventory.grpc.client';
 
+// CQRS Handlers
+import { CreateOrderHandler } from './cqrs/handlers/create-order.handler';
+import { OrderCreatedHandler } from './cqrs/handlers/order-created.handler';
+import { GetOrderHandler } from './cqrs/handlers/get-order.handler';
+
+const CommandHandlers = [CreateOrderHandler];
+const EventHandlers = [OrderCreatedHandler];
+const QueryHandlers = [GetOrderHandler];
+
 @Module({
   imports: [
+    CqrsModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -25,6 +35,11 @@ import { InventoryGrpcClient } from './grpc/inventory.grpc.client';
     }),
   ],
   controllers: [OrderController],
-  providers: [OrderService, InventoryGrpcClient],
+  providers: [
+    InventoryGrpcClient,
+    ...CommandHandlers,
+    ...EventHandlers,
+    ...QueryHandlers,
+  ],
 })
 export class AppModule {}

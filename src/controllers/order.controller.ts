@@ -1,12 +1,24 @@
-import { Controller, Post, Body } from '@nestjs/common';
-import { OrderService } from '../services/order.service';
+import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateOrderCommand } from '../cqrs/commands/create-order.command';
+import { GetOrderQuery } from '../cqrs/queries/get-order.query';
 
 @Controller('orders')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
 
   @Post()
   async createOrder(@Body() createOrderDto: { productId: string; quantity: number }) {
-    return this.orderService.createOrder(createOrderDto.productId, createOrderDto.quantity);
+    return this.commandBus.execute(
+      new CreateOrderCommand(createOrderDto.productId, createOrderDto.quantity)
+    );
+  }
+
+  @Get(':id')
+  async getOrder(@Param('id') id: string) {
+    return this.queryBus.execute(new GetOrderQuery(id));
   }
 }
